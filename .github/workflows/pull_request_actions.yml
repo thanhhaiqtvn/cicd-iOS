@@ -1,0 +1,35 @@
+name: Pull Request actions
+
+# Controls when the action will run. Triggers the workflow on push
+# events but only for the develop branch
+on:
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+      
+      - name: CocoaPod Install
+        run: pod install
+      
+      - name: Install Bundler
+        run: gem install bundler
+
+      - name: Install gems
+        run: bundle install
+      
+      # Run the tests
+      - name: Run the tests
+        run: bundle exec fastlane ios tests
