@@ -1,0 +1,137 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+BUNDLE_IDENTIFIER = ENV["BUNDLE_IDENTIFIER"]
+TEMP_KEYCHAIN_USER = ENV["TEMP_KEYCHAIN_USER"]
+TEMP_KEYCHAIN_PASSWORD = ENV["TEMP_KEYCHAIN_PASSWORD"]
+
+def delete_temp_keychain(name)
+  delete_keychain(
+    name: name
+  ) if File.exist? File.expand_path("~/Library/Keychains/#{name}-db")
+end
+
+def create_temp_keychain(name, password)
+  create_keychain(
+    name: name,
+    password: password,
+    default_keychain: false,
+    unlock: true,
+    timeout: 36000,
+    lock_when_sleeps: false
+  )
+end
+
+def ensure_temp_keychain(name, password)
+  delete_temp_keychain(name)
+  create_temp_keychain(name, password)
+end
+
+platform :ios do
+	
+    desc 'Builds project and executes unit tests'
+    lane :tests do
+        run_tests(
+            workspace: ENV["WORKSPACE"],
+            scheme: ENV["SCHEME_DEV"]
+        )
+    end
+    
+    # Apple TestFight upload binaries
+    desc "Submit a new build for Apple TestFlight with current version and builder number (Debug)"
+    lane :dev do |options|
+        clear_derived_data
+        xcclean(scheme: ENV["SCHEME_DEV"])
+        setup_certificates
+        build_debug
+    end
+
+    desc "Submit a new build for Apple TestFlight with current version and builder number (Production)"
+    lane :prod do |options|
+        clear_derived_data
+        xcclean(scheme: ENV["SCHEME_RELEASE"])
+        setup_certificates
+        build_release
+    end
+
+    ###############################################
+    ################# private_lane ################
+    ###############################################
+    private_lane :setup_certificates do |options|
+      keychain_name = TEMP_KEYCHAIN_USER
+      keychain_password = TEMP_KEYCHAIN_PASSWORD
+      ensure_temp_keychain(keychain_name, keychain_password)
+      
+      match(
+        type: ENV["FASTLANE_MATCH_TYPE"],
+        app_identifier: "#{BUNDLE_IDENTIFIER}",
+        git_basic_authorization: Base64.strict_encode64(ENV["GIT_AUTHORIZATION"]),
+        readonly: true,
+        keychain_name: keychain_name,
+        keychain_password: keychain_password,
+        force_for_new_devices: true
+      )
+  
+      create_keychain(
+        name: ENV["TEMP_KEYCHAIN_USER"],
+        password: ENV["TEMP_KEYCHAIN_PASSWORD"],
+        default_keychain: false,
+        unlock: true,
+        timeout: 36000,
+        lock_when_sleeps: false
+      )
+    end
+
+    private_lane :build do |options|
+        gym(
+            scheme: options[:scheme],
+            workspace: ENV["WORKSPACE"],
+            export_method: options[:export_method],
+            xcargs: "-allowProvisioningUpdates",
+            export_xcargs: "-allowProvisioningUpdates",
+            suppress_xcode_output: true,
+            clean: true
+        )
+        # testflight(app_identifier: options[:app_identifier], changelog: options[:changelog], skip_waiting_for_build_processing: true)
+    end
+
+    private_lane :build_debug do
+        build(scheme: ENV["SCHEME_DEV"], export_method: "development")
+    end
+
+    private_lane :build_release do |options|
+        build(scheme: ENV["SCHEME_RELEASE"], export_method: "app-storre")
+    end
+	
+    before_all do |lane|
+        # Ensure that your git status is not dirty
+        # ensure_git_status_clean
+    end
+
+    after_all do |lane|
+        # This block is called, only if the executed lane was successful
+        copy_artifacts(
+           target_path: "artifacts",
+           artifacts: ["*.cer", "*.mobileprovision", "*.ipa", "*.dSYM.zip"],
+           keep_original: false
+        )
+    end
+
+    error do |lane, exception|
+        #reset_git_repo(force: true)
+    end
+end

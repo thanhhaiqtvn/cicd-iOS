@@ -11,3 +11,10 @@ Pods
 *.dSYM.zip
 *.ipa
 *.DS_Store
+
+# evn secrets
+.env
+
+# Fastlane
+/fastlane/report.xml
+/fastlane/test_output
