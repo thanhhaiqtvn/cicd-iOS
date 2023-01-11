@@ -4,3 +4,8 @@
 
 # For more information about the Appfile, see:
 #     https://docs.fastlane.tools/advanced/#appfile
+
+app_identifier "info.oladev.cicdios" # The bundle identifier of your app
+# apple_id "thanhhaiqtvn@gmail.com" # Your Apple email address
+itc_team_id "118113757"
+team_id "1661073171" # Developer Portal Team ID
