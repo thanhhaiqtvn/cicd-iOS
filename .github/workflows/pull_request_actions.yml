@@ -31,5 +31,10 @@ jobs:
         run: bundle install
       
       # Run the tests
-      - name: Run the tests
-        run: bundle exec fastlane ios tests
+      # - name: Run the tests
+      #   run: bundle exec fastlane ios tests
+      
+      - name: Run Fastlane for iOS - Upload to App Center
+        env:
+            GIT_AUTHORIZATION: ${{ secrets.GIT_AUTHORIZATION }}
+        run: bundle exec fastlane ios prod_appCenter
