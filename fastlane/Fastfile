@@ -15,9 +15,23 @@
 
 default_platform(:ios)
 
-BUNDLE_IDENTIFIER = ENV["BUNDLE_IDENTIFIER"]
-TEMP_KEYCHAIN_USER = ENV["TEMP_KEYCHAIN_USER"]
-TEMP_KEYCHAIN_PASSWORD = ENV["TEMP_KEYCHAIN_PASSWORD"]
+# General
+BUNDLE_IDENTIFIER               = ENV["BUNDLE_IDENTIFIER"]
+TEMP_KEYCHAIN_USER              = ENV["TEMP_KEYCHAIN_USER"]
+TEMP_KEYCHAIN_PASSWORD          = ENV["TEMP_KEYCHAIN_PASSWORD"]
+
+WORKSPACE                       = ENV["WORKSPACE"]
+SCHEME_DEV                      = ENV["SCHEME_DEV"]
+SCHEME_RELEASE                  = ENV["SCHEME_RELEASE"]
+EXPORT_METHOD                   = ENV["EXPORT_METHOD"]
+APP_CENTER_DEV_GROUPS           = ENV["APP_CENTER_DEV_GROUPS"]
+APP_CENTER_DISTRIBUTION_GROUPS  = ENV["APP_CENTER_DISTRIBUTION_GROUPS"]
+GIT_AUTHORIZATION               = ENV["GIT_AUTHORIZATION"]
+
+# App Center
+APP_CENTER_API_TOKEN            = ENV["APP_CENTER_API_TOKEN"]
+APP_CENTER_OWNER_NAME           = ENV["APP_CENTER_OWNER_NAME"]
+APP_CENTER_APP_NAME             = ENV["APP_CENTER_APP_NAME"]
 
 def delete_temp_keychain(name)
   delete_keychain(
@@ -45,27 +59,45 @@ platform :ios do
 	
     desc 'Builds project and executes unit tests'
     lane :tests do
-        run_tests(
-            workspace: ENV["WORKSPACE"],
-            scheme: ENV["SCHEME_DEV"]
-        )
+      run_tests(
+          workspace: WORKSPACE,
+          scheme: SCHEME_DEV
+      )
     end
     
     # Apple TestFight upload binaries
     desc "Submit a new build for Apple TestFlight with current version and builder number (Debug)"
     lane :dev do |options|
-        clear_derived_data
-        xcclean(scheme: ENV["SCHEME_DEV"])
-        setup_certificates
-        build_debug
+      clear_derived_data
+      xcclean(scheme: SCHEME_DEV)
+      setup_certificates
+      build_debug
+      delete_temp_keychain(TEMP_KEYCHAIN_USER)
     end
 
     desc "Submit a new build for Apple TestFlight with current version and builder number (Production)"
     lane :prod do |options|
-        clear_derived_data
-        xcclean(scheme: ENV["SCHEME_RELEASE"])
-        setup_certificates
-        build_release
+      clear_derived_data
+      xcclean(scheme: SCHEME_RELEASE)
+      setup_certificates
+      build_release
+    end
+
+    # AppCenter upload binaries
+    desc "Submit a new build to AppCenter with current version and builder number (Debug)"
+    lane :dev_appCenter do |options|
+      clear_derived_data
+      xcclean(scheme: SCHEME_DEV)
+      setup_certificates
+      appCenter(scheme: SCHEME_DEV, groups: APP_CENTER_DEV_GROUPS)
+    end
+
+    desc "Submit a new build to AppCenter with current version and builder number (Production)"
+    lane :prod_appCenter do |options|
+      clear_derived_data
+      xcclean(scheme: SCHEME_RELEASE)
+      setup_certificates
+      appCenter(scheme: SCHEME_RELEASE, groups: APP_CENTER_DISTRIBUTION_GROUPS)
     end
 
     ###############################################
@@ -74,12 +106,13 @@ platform :ios do
     private_lane :setup_certificates do |options|
       keychain_name = TEMP_KEYCHAIN_USER
       keychain_password = TEMP_KEYCHAIN_PASSWORD
+      app_identifier = BUNDLE_IDENTIFIER
       ensure_temp_keychain(keychain_name, keychain_password)
       
       match(
-        type: ENV["FASTLANE_MATCH_TYPE"],
-        app_identifier: "#{BUNDLE_IDENTIFIER}",
-        git_basic_authorization: Base64.strict_encode64(ENV["GIT_AUTHORIZATION"]),
+        type: "development",
+        app_identifier: app_identifier,
+        git_basic_authorization: Base64.strict_encode64(GIT_AUTHORIZATION),
         readonly: true,
         keychain_name: keychain_name,
         keychain_password: keychain_password,
@@ -87,34 +120,51 @@ platform :ios do
       )
   
       create_keychain(
-        name: ENV["TEMP_KEYCHAIN_USER"],
-        password: ENV["TEMP_KEYCHAIN_PASSWORD"],
+        name: keychain_name,
+        password: keychain_password,
         default_keychain: false,
         unlock: true,
-        timeout: 36000,
+        timeout: 3600,
         lock_when_sleeps: false
       )
     end
 
+    private_lane :appCenter do |options|
+
+      # Build the app
+      build(scheme: options[:scheme])
+
+      # Upload the app
+      appcenter_upload(
+        api_token: APP_CENTER_API_TOKEN,
+        owner_name: APP_CENTER_OWNER_NAME,
+        app_name: APP_CENTER_APP_NAME,
+        destinations: options[:groups],
+        release_notes: (options[:scheme].include? "Release") ? "RELEASE Build\n=============" : "DEBUG Build\n===========",
+        notify_testers: true
+      )
+    end
+
     private_lane :build do |options|
-        gym(
-            scheme: options[:scheme],
-            workspace: ENV["WORKSPACE"],
-            export_method: options[:export_method],
-            xcargs: "-allowProvisioningUpdates",
-            export_xcargs: "-allowProvisioningUpdates",
-            suppress_xcode_output: true,
-            clean: true
-        )
-        # testflight(app_identifier: options[:app_identifier], changelog: options[:changelog], skip_waiting_for_build_processing: true)
+      gym(
+        scheme: options[:scheme],
+        configuration: "Debug",
+        workspace: WORKSPACE,
+        export_method: EXPORT_METHOD,
+        xcargs: "-allowProvisioningUpdates",
+        export_xcargs: "-allowProvisioningUpdates",
+        suppress_xcode_output: true,
+        clean: true
+      )
+      # testflight(app_identifier: options[:app_identifier], changelog: options[:changelog], skip_waiting_for_build_processing: true)
     end
 
     private_lane :build_debug do
-        build(scheme: ENV["SCHEME_DEV"], export_method: "development")
+        build(scheme: SCHEME_DEV, export_method: "development")
     end
 
     private_lane :build_release do |options|
-        build(scheme: ENV["SCHEME_RELEASE"], export_method: "app-storre")
+        build(scheme: SCHEME_RELEASE, export_method: "app-store")
     end
 	
     before_all do |lane|

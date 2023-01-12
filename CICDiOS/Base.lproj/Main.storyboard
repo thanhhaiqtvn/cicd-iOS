@@ -2,6 +2,7 @@
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="21507" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
     <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
+        <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="21505"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
@@ -23,12 +24,22 @@
                                 <color key="textColor" name="AccentColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="MdC-Bj-FOi">
+                                <rect key="frame" x="125.66666666666667" y="474" width="141.66666666666663" height="35"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="plain" title="Crashes Button"/>
+                                <connections>
+                                    <action selector="crashReportTapped:" destination="BYZ-38-t0r" eventType="touchUpInside" id="SF1-FE-KdP"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
+                            <constraint firstItem="MdC-Bj-FOi" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="0uU-Tl-FyN"/>
                             <constraint firstItem="K5T-1R-i0g" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="D0d-Ye-rvI"/>
                             <constraint firstItem="K5T-1R-i0g" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="u8J-VI-n4E"/>
+                            <constraint firstItem="MdC-Bj-FOi" firstAttribute="top" secondItem="K5T-1R-i0g" secondAttribute="bottom" constant="30" id="z74-iA-SZ8"/>
                         </constraints>
                     </view>
                 </viewController>

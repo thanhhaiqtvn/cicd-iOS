@@ -39,6 +39,22 @@ Submit a new build for Apple TestFlight with current version and builder number 
 
 Submit a new build for Apple TestFlight with current version and builder number (Production)
 
+### ios dev_appCenter
+
+```sh
+[bundle exec] fastlane ios dev_appCenter
+```
+
+Submit a new build to AppCenter with current version and builder number (Debug)
+
+### ios prod_appCenter
+
+```sh
+[bundle exec] fastlane ios prod_appCenter
+```
+
+Submit a new build to AppCenter with current version and builder number (Production)
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
