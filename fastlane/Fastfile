@@ -10,28 +10,33 @@
 #     https://docs.fastlane.tools/plugins/available-plugins
 #
 
-# Uncomment the line if you want fastlane to automatically update itself
-# update_fastlane
-
 default_platform(:ios)
 
 # General
 BUNDLE_IDENTIFIER               = ENV["BUNDLE_IDENTIFIER"]
-TEMP_KEYCHAIN_USER              = ENV["TEMP_KEYCHAIN_USER"]
-TEMP_KEYCHAIN_PASSWORD          = ENV["TEMP_KEYCHAIN_PASSWORD"]
-
 WORKSPACE                       = ENV["WORKSPACE"]
 SCHEME_DEV                      = ENV["SCHEME_DEV"]
 SCHEME_RELEASE                  = ENV["SCHEME_RELEASE"]
-EXPORT_METHOD                   = ENV["EXPORT_METHOD"]
-APP_CENTER_DEV_GROUPS           = ENV["APP_CENTER_DEV_GROUPS"]
-APP_CENTER_DISTRIBUTION_GROUPS  = ENV["APP_CENTER_DISTRIBUTION_GROUPS"]
+BUILD_CONFIGURATION_DEBUG       = ENV["BUILD_CONFIGURATION_DEBUG"]
+BUILD_CONFIGURATION_RELEASE     = ENV["BUILD_CONFIGURATION_RELEASE"]
+
+# CodeSignIn
+TEMP_KEYCHAIN_USER              = ENV["TEMP_KEYCHAIN_USER"]
+TEMP_KEYCHAIN_PASSWORD          = ENV["TEMP_KEYCHAIN_PASSWORD"]
 GIT_AUTHORIZATION               = ENV["GIT_AUTHORIZATION"]
+PROVISIONING_PROFILE_SPECIFIER_DEV  = ENV["PROVISIONING_PROFILE_SPECIFIER_DEV"]
+PROVISIONING_PROFILE_SPECIFIER_APPSTORE = ENV["PROVISIONING_PROFILE_SPECIFIER_APPSTORE"]
+
+# Fastlane
+FASTLANE_MATCH_TYPE_DEV         = ENV["FASTLANE_MATCH_TYPE_DEV"]
+FASTLANE_MATCH_TYPE_APPSTORE    = ENV["FASTLANE_MATCH_TYPE_APPSTORE"]
 
 # App Center
 APP_CENTER_API_TOKEN            = ENV["APP_CENTER_API_TOKEN"]
 APP_CENTER_OWNER_NAME           = ENV["APP_CENTER_OWNER_NAME"]
 APP_CENTER_APP_NAME             = ENV["APP_CENTER_APP_NAME"]
+APP_CENTER_GROUPS_DEV           = ENV["APP_CENTER_GROUPS_DEV"]
+APP_CENTER_GROUPS_DIST          = ENV["APP_CENTER_GROUPS_DIST"]
 
 def delete_temp_keychain(name)
   delete_keychain(
@@ -45,7 +50,7 @@ def create_temp_keychain(name, password)
     password: password,
     default_keychain: false,
     unlock: true,
-    timeout: 36000,
+    timeout: 3600,
     lock_when_sleeps: false
   )
 end
@@ -68,60 +73,50 @@ platform :ios do
     # Apple TestFight upload binaries
     desc "Submit a new build for Apple TestFlight with current version and builder number (Debug)"
     lane :dev do |options|
-      clear_derived_data
-      xcclean(scheme: SCHEME_DEV)
-      setup_certificates
       build_debug
       delete_temp_keychain(TEMP_KEYCHAIN_USER)
     end
 
     desc "Submit a new build for Apple TestFlight with current version and builder number (Production)"
     lane :prod do |options|
-      clear_derived_data
-      xcclean(scheme: SCHEME_RELEASE)
-      setup_certificates
       build_release
+      delete_temp_keychain(TEMP_KEYCHAIN_USER)
     end
 
     # AppCenter upload binaries
     desc "Submit a new build to AppCenter with current version and builder number (Debug)"
     lane :dev_appCenter do |options|
-      clear_derived_data
-      xcclean(scheme: SCHEME_DEV)
-      setup_certificates
-      appCenter(scheme: SCHEME_DEV, groups: APP_CENTER_DEV_GROUPS)
+      build_debug
+      appCenter(scheme: SCHEME_DEV, groups: APP_CENTER_GROUPS_DEV)
+      delete_temp_keychain(TEMP_KEYCHAIN_USER)
     end
 
     desc "Submit a new build to AppCenter with current version and builder number (Production)"
     lane :prod_appCenter do |options|
-      clear_derived_data
-      xcclean(scheme: SCHEME_RELEASE)
-      setup_certificates
-      appCenter(scheme: SCHEME_RELEASE, groups: APP_CENTER_DISTRIBUTION_GROUPS)
+      build_release
+      appCenter(scheme: SCHEME_RELEASE, groups: APP_CENTER_GROUPS_DIST)
+      delete_temp_keychain(TEMP_KEYCHAIN_USER)
     end
 
     ###############################################
     ################# private_lane ################
     ###############################################
     private_lane :setup_certificates do |options|
-      keychain_name = TEMP_KEYCHAIN_USER
-      keychain_password = TEMP_KEYCHAIN_PASSWORD
-      app_identifier = BUNDLE_IDENTIFIER
-      ensure_temp_keychain(keychain_name, keychain_password)
+      ensure_temp_keychain(TEMP_KEYCHAIN_USER, TEMP_KEYCHAIN_PASSWORD)
       
       match(
-        type: "development",
-        app_identifier: app_identifier,
+        type: options[:type],
+        app_identifier: BUNDLE_IDENTIFIER,
+        keychain_name: TEMP_KEYCHAIN_USER,
+        keychain_password: TEMP_KEYCHAIN_PASSWORD,
         git_basic_authorization: Base64.strict_encode64(GIT_AUTHORIZATION),
         readonly: true,
-        keychain_name: keychain_name,
-        keychain_password: keychain_password,
         force_for_new_devices: true
       )
   
       create_keychain(
-        name: keychain_name,
-        password: keychain_password,
+        name: TEMP_KEYCHAIN_USER,
+        password: TEMP_KEYCHAIN_PASSWORD,
         default_keychain: false,
         unlock: true,
         timeout: 3600,
@@ -130,11 +125,7 @@ platform :ios do
     end
 
     private_lane :appCenter do |options|
-
-      # Build the app
-      build(scheme: options[:scheme])
-
-      # Upload the app
+      # Upload the app to appCenter
       appcenter_upload(
         api_token: APP_CENTER_API_TOKEN,
         owner_name: APP_CENTER_OWNER_NAME,
@@ -148,9 +139,14 @@ platform :ios do
     private_lane :build do |options|
       gym(
         scheme: options[:scheme],
-        configuration: "Debug",
+        configuration: options[:configuration],
         workspace: WORKSPACE,
-        export_method: EXPORT_METHOD,
+        export_method: options[:export_method],
+        export_options: {
+          provisioningProfiles: { 
+            BUNDLE_IDENTIFIER => options[:provisioning_profiles]
+          }
+        },
         xcargs: "-allowProvisioningUpdates",
         export_xcargs: "-allowProvisioningUpdates",
         suppress_xcode_output: true,
@@ -160,28 +156,44 @@ platform :ios do
     end
 
     private_lane :build_debug do
-        build(scheme: SCHEME_DEV, export_method: "development")
+      clear_derived_data
+      xcclean(scheme: SCHEME_DEV)
+      setup_certificates(type: FASTLANE_MATCH_TYPE_DEV)
+      build(
+        scheme: SCHEME_DEV,
+        export_method: "development",
+        provisioning_profiles: PROVISIONING_PROFILE_SPECIFIER_DEV,
+        configuration: BUILD_CONFIGURATION_DEBUG
+      )
     end
 
     private_lane :build_release do |options|
-        build(scheme: SCHEME_RELEASE, export_method: "app-store")
+      clear_derived_data
+      xcclean(scheme: SCHEME_RELEASE)
+      setup_certificates(type: FASTLANE_MATCH_TYPE_APPSTORE)
+      build(
+        scheme: SCHEME_RELEASE,
+        export_method: "app-store",
+        provisioning_profiles: PROVISIONING_PROFILE_SPECIFIER_APPSTORE,
+        configuration: BUILD_CONFIGURATION_RELEASE
+      )
     end
 	
     before_all do |lane|
-        # Ensure that your git status is not dirty
-        # ensure_git_status_clean
+      # Ensure that your git status is not dirty
+      # ensure_git_status_clean
     end
 
     after_all do |lane|
-        # This block is called, only if the executed lane was successful
-        copy_artifacts(
-           target_path: "artifacts",
-           artifacts: ["*.cer", "*.mobileprovision", "*.ipa", "*.dSYM.zip"],
-           keep_original: false
-        )
+      # This block is called, only if the executed lane was successful
+      copy_artifacts(
+          target_path: "artifacts",
+          artifacts: ["*.cer", "*.mobileprovision", "*.ipa", "*.dSYM.zip"],
+          keep_original: false
+      )
     end
 
     error do |lane, exception|
-        #reset_git_repo(force: true)
+      #reset_git_repo(force: true)
     end
 end
