@@ -6,6 +6,6 @@
 #     https://docs.fastlane.tools/advanced/#appfile
 
 app_identifier "info.oladev.cicdios" # The bundle identifier of your app
-# apple_id "thanhhaiqtvn@gmail.com" # Your Apple email address
-itc_team_id "118113757"
-team_id "1661073171" # Developer Portal Team ID
+apple_id(ENV['FASTLANE_USER']) # Your Apple email address
+itc_team_id(ENV['ITC_TEAM_ID']) # App Store Connect Team ID
+team_id(ENV['DEVELOPER_PORTAL_TEAM_ID']) # Developer Portal Team ID
