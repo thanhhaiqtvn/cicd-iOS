@@ -40,6 +40,9 @@ APP_CENTER_APP_NAME             = ENV["APP_CENTER_APP_NAME"]
 APP_CENTER_GROUPS_DEV           = ENV["APP_CENTER_GROUPS_DEV"]
 APP_CENTER_GROUPS_DIST          = ENV["APP_CENTER_GROUPS_DIST"]
 
+# Sonar
+SONAR_TOKEN                     = ENV["SONAR_TOKEN"]
+
 def delete_temp_keychain(name)
   delete_keychain(
     name: name
@@ -109,7 +112,7 @@ platform :ios do
         project_name: PROJECT_NAME,
         sources_path: File.expand_path("../sonar_reports"),
         sonar_organization: "thanhhaiqtvn",
-        sonar_login: ENV["SONAR_TOKEN"],
+        sonar_login: SONAR_TOKEN,
         sonar_url: "https://sonarcloud.io"
       )
     end
