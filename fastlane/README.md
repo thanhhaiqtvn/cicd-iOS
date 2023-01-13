@@ -55,6 +55,14 @@ Submit a new build to AppCenter with current version and builder number (Debug)
 
 Submit a new build to AppCenter with current version and builder number (Production)
 
+### ios sonar_run
+
+```sh
+[bundle exec] fastlane ios sonar_run
+```
+
+Run Sonarqude
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
