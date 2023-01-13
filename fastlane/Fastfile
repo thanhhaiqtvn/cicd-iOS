@@ -19,6 +19,8 @@ SCHEME_DEV                      = ENV["SCHEME_DEV"]
 SCHEME_RELEASE                  = ENV["SCHEME_RELEASE"]
 BUILD_CONFIGURATION_DEBUG       = ENV["BUILD_CONFIGURATION_DEBUG"]
 BUILD_CONFIGURATION_RELEASE     = ENV["BUILD_CONFIGURATION_RELEASE"]
+PROJECT_VERSION                 = ENV["PROJECT_VERSION"]
+PROJECT_NAME                    = ENV["PROJECT_NAME"]
 
 # CodeSignIn
 TEMP_KEYCHAIN_USER              = ENV["TEMP_KEYCHAIN_USER"]
@@ -96,6 +98,20 @@ platform :ios do
       build_release
       appCenter(scheme: SCHEME_RELEASE, groups: APP_CENTER_GROUPS_DIST)
       delete_temp_keychain(TEMP_KEYCHAIN_USER)
+    end
+
+    # Sonar Analysic
+    desc "Run Sonarqude"
+    lane :sonar_run do
+      sonar(
+        project_key: BUNDLE_IDENTIFIER,
+        project_version: PROJECT_VERSION,
+        project_name: PROJECT_NAME,
+        sources_path: File.expand_path("../sonar_reports"),
+        sonar_organization: "thanhhaiqtvn",
+        sonar_login: ENV["SONAR_TOKEN"],
+        sonar_url: "https://sonarcloud.io"
+      )
     end
 
     ###############################################
