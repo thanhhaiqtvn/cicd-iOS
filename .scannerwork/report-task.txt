@@ -1,0 +1,6 @@
+projectKey=focus-me
+serverUrl=http://localhost:9000
+serverVersion=10.0.0.68432
+dashboardUrl=http://localhost:9000/dashboard?id=focus-me
+ceTaskId=AYgt5XPmaM9T8VNBXTnD
+ceTaskUrl=http://localhost:9000/api/ce/task?id=AYgt5XPmaM9T8VNBXTnD

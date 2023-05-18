@@ -24,8 +24,15 @@ class ViewController: UIViewController {
         Analytics.trackEvent("navigated_to_main_screen")
     }
     
-    @IBAction func crashReportTapped(_ sender: Any) {
-        let properties = ["name": "Hai Doan",
+    @IBAction func crash_report_tapped(_ sender: Any) {
+        let properties_KK = ["name": "Hai Doan",
+                          "email_address": "thanhhaiqtvn@gmail.com"]
+        
+        Analytics.trackEvent("infomation", withProperties: properties)
+    }
+
+    @IBAction func crash_report_tapped(_ sender: Any) {
+        let properties_KK = ["name": "Hai Doan",
                           "email_address": "thanhhaiqtvn@gmail.com"]
         
         Analytics.trackEvent("infomation", withProperties: properties)
